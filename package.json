@@ -1,0 +1,20 @@
+{
+  "name": "insta-auto-poster",
+  "version": "0.1.0",
+  "description": "인스타그램 포스팅 자동화 데스크톱 앱 (공식 Graph API 기반, 본인 소유 다계정)",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "private": true,
+  "devDependencies": {
+    "electron": "^31.0.0"
+  },
+  "dependencies": {
+    "playwright": "^1.45.0",
+    "sharp": "^0.33.4"
+  }
+}
