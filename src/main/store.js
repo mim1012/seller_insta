@@ -51,7 +51,16 @@ function defaultState() {
     registration: g.registration,
     gpt: {
       enabled: false, apiKey: '', model: 'gpt-4o-mini',
+      // 미디어 프로바이더: 'openai'(gpt-image-1/sora-2) | 'fal'(가성비 게이트웨이)
+      provider: 'openai',
       imageModel: 'gpt-image-1', videoModel: 'sora-2',
+      // fal.ai 게이트웨이 설정(provider==='fal'일 때 사용). 캡션은 계속 OpenAI(apiKey) 담당.
+      falKey: '',
+      falImageModel: 'fal-ai/bytedance/seedream/v4/text-to-image',         // 상세페이지/제품 이미지 특화(t2i, $0.03/장)
+      falImageEditModel: 'fal-ai/gemini-25-flash-image/edit',             // 제품 사진 배경교체(i2i, $0.039/장)
+      falVideoModel: 'fal-ai/bytedance/seedance/v1/pro/image-to-video',    // 마케팅 영상 특화(i2v, 제품사진→광고컷)
+      falVideoT2vModel: 'fal-ai/kling-video/v2.5-turbo/pro/text-to-video', // 텍스트만일 때(t2v, $0.35/5s)
+      aiImageCount: 4,                                                     // 배치 생성 기본 장수(여러 개 뽑아 일부 선택)
       prompt: '비슷한 느낌으로 자연스럽게 다시 써줘',
     },
     work: g.work,
@@ -82,6 +91,7 @@ function decryptSecret(value) {
 function hydrateSecrets(nextState) {
   const gpt = nextState.gpt || {};
   if (!gpt.apiKey && gpt.apiKeyEnc) gpt.apiKey = decryptSecret(gpt.apiKeyEnc);
+  if (!gpt.falKey && gpt.falKeyEnc) gpt.falKey = decryptSecret(gpt.falKeyEnc);
   nextState.gpt = gpt;
   return nextState;
 }
@@ -93,6 +103,13 @@ function serializeState() {
     if (encrypted) {
       out.gpt.apiKeyEnc = encrypted;
       delete out.gpt.apiKey;
+    }
+  }
+  if (out.gpt && out.gpt.falKey) {
+    const encrypted = encryptSecret(out.gpt.falKey);
+    if (encrypted) {
+      out.gpt.falKeyEnc = encrypted;
+      delete out.gpt.falKey;
     }
   }
   return out;

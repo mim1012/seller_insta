@@ -40,6 +40,11 @@
   .previewMedia { width:260px; min-height:260px; border:1px solid #ccc; background:#fafafa; display:flex; align-items:center; justify-content:center; overflow:hidden; }
   .previewMedia img, .previewMedia video { max-width:100%; max-height:320px; display:block; }
   .previewText { flex:1; min-width:260px; }
+  .galleryGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; max-height:340px; overflow-y:auto; padding:4px; }
+  .galleryItem { position:relative; border:1px solid #ccc; background:#fafafa; }
+  .galleryItem img { width:100%; height:130px; object-fit:cover; display:block; }
+  .galleryItem.sel { outline:3px solid #2d7; border-color:#2d7; }
+  .galleryItem input { position:absolute; top:4px; left:4px; width:18px; height:18px; }
 </style>
 </head>
 <body>
@@ -157,17 +162,32 @@
       <button id="btnAttachMedia">로컬 미디어 첨부</button>
     </div>
     <div class="row"><textarea id="aiCaptionPrompt" rows="2" style="width:100%" placeholder="AI 글쓰기 프롬프트"></textarea></div>
-    <div class="row"><textarea id="aiImagePrompt" rows="3" style="width:100%" placeholder="AI 이미지/릴스 생성 프롬프트"></textarea></div>
+    <div class="row"><textarea id="aiImagePrompt" rows="3" style="width:100%" placeholder="원하는 이미지/영상을 텍스트로 설명 (예: 화이트 배경 미니멀 향수병, 부드러운 자연광, 상단 여백)"></textarea></div>
     <div class="row">
-      <button id="btnAiGenerate">AI 생성</button>
+      생성 장수 <input type="number" id="aiCount" value="4" min="1" max="10" style="width:56px"/>
+      <button id="btnAiProductPhoto">제품 사진 첨부(배경교체/영상용)</button>
+      <span id="aiProductInfo" class="status"></span>
+    </div>
+    <div class="row">
+      <button id="btnAiBatch">여러 장 생성</button>
+      <button id="btnAiGenerate">1개 생성(글+미디어)</button>
       <button id="btnAiRegenerate">다시 생성</button>
-      <button id="btnAiUse">이 결과 선택</button>
       <span id="aiInfo" class="status"></span>
     </div>
+    <fieldset><legend>생성 후보 갤러리 — 체크한 것만 업로드 목록에 추가</legend>
+      <div class="row">
+        <button id="btnAiSelectAll">전체 선택</button>
+        <button id="btnAiSelectNone">선택 해제</button>
+        <button id="btnAiAddSelected">선택한 항목 업로드 목록에 추가</button>
+        <span id="aiGalleryInfo" class="status"></span>
+      </div>
+      <div id="aiGallery" class="galleryGrid"></div>
+    </fieldset>
     <div class="previewBox">
       <div class="previewMedia" id="aiMediaPreview">미리보기</div>
       <div class="previewText">
-        <textarea id="aiCaptionPreview" rows="12" style="width:100%" placeholder="생성된 글이 여기에 표시됩니다"></textarea>
+        <textarea id="aiCaptionPreview" rows="8" style="width:100%" placeholder="생성된 글이 여기에 표시됩니다"></textarea>
+        <button id="btnAiUse">이 글/미디어 선택</button>
       </div>
     </div>
   </div>
@@ -195,11 +215,52 @@
 
     <fieldset><legend>내용 GPT 변형</legend>
       <div class="row"><label class="chk"><input type="checkbox" id="gptOn"/>GPT 사용</label>
-        <input id="gptKey" type="password" placeholder="OpenAI API key" style="flex:1"/>
+        <input id="gptKey" type="password" placeholder="OpenAI API key (캡션 생성용)" style="flex:1"/>
         <select id="gptModel"></select>
         <button id="btnGptTest">키 테스트</button></div>
       <div class="row"><input id="gptPrompt" placeholder="프롬프트 예) 비슷하게 만들어줘" style="flex:1"/></div>
-      <span class="status">※ GPT 키는 전역 공통입니다.</span>
+      <span class="status">※ GPT 키는 전역 공통입니다. 캡션은 항상 OpenAI가 담당합니다.</span>
+    </fieldset>
+
+    <fieldset><legend>이미지/영상 생성 프로바이더</legend>
+      <div class="row">미디어 생성:
+        <select id="mediaProvider">
+          <option value="openai">OpenAI (gpt-image-1 / sora-2, 고가)</option>
+          <option value="fal">fal.ai 게이트웨이 (가성비, 권장)</option>
+        </select>
+      </div>
+      <div class="row" id="falRow" style="display:none">
+        <input id="falKey" type="password" placeholder="fal.ai API key (FAL_KEY)" style="flex:1"/>
+        <button id="btnFalTest">fal 키 테스트</button>
+      </div>
+      <div class="row" id="falModelRow" style="display:none">이미지(텍스트→이미지)
+        <select id="falImageModel">
+          <option value="fal-ai/bytedance/seedream/v4/text-to-image">Seedream V4 (상세페이지/제품 특화·$0.03)</option>
+          <option value="fal-ai/gemini-25-flash-image">Nano Banana ($0.039·텍스트/편집)</option>
+          <option value="fal-ai/recraft/v3/text-to-image">Recraft V3 (디자인/배너·$0.04)</option>
+          <option value="fal-ai/ideogram/v3">Ideogram v3 (타이포·$0.03~)</option>
+          <option value="fal-ai/flux/schnell">FLUX Schnell (초저가·대량)</option>
+        </select>
+        영상(텍스트→영상)
+        <select id="falVideoT2vModel">
+          <option value="fal-ai/kling-video/v2.5-turbo/pro/text-to-video">Kling 2.5 Turbo Pro ($0.35/5s)</option>
+          <option value="fal-ai/wan-25-preview/text-to-video">Wan 2.5 (저가)</option>
+        </select>
+      </div>
+      <div class="row" id="falEditModelRow" style="display:none">제품사진→배경교체(i2i)
+        <select id="falImageEditModel">
+          <option value="fal-ai/gemini-25-flash-image/edit">Nano Banana edit (아이덴티티 보존·$0.039)</option>
+          <option value="fal-ai/bytedance/seedream/v4/edit">Seedream V4 edit ($0.03)</option>
+          <option value="fal-ai/flux-pro/kontext">FLUX Kontext Pro ($0.04)</option>
+        </select>
+        제품사진→영상(i2v·마케팅 특화)
+        <select id="falVideoModel">
+          <option value="fal-ai/bytedance/seedance/v1/pro/image-to-video">Seedance Pro (제품광고 특화·$0.62/5s)</option>
+          <option value="fal-ai/kling-video/v2.5-turbo/pro/image-to-video">Kling 2.5 Turbo Pro ($0.35/5s)</option>
+          <option value="fal-ai/veo3.1/fast/image-to-video">Veo 3.1 Fast (오디오·$0.15/초)</option>
+        </select>
+      </div>
+      <span class="status">※ fal.ai 경유 생성물은 상업 이용 가능. 제품 사진을 첨부하면 배경교체(i2i)/광고영상(i2v) 모델로 자동 전환됩니다. 단가는 변동될 수 있습니다.</span>
     </fieldset>
 
     <fieldset><legend>단일 발행 테스트용 캡션</legend>

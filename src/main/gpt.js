@@ -7,6 +7,10 @@
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
+const fal = require('./providers/fal');
+
+// 미디어(이미지/영상) 프로바이더: 'openai'(기본) | 'fal'(가성비 게이트웨이)
+function mediaProvider(cfg) { return (cfg && cfg.provider) || 'openai'; }
 
 // 마케팅듀오 기능표의 지원 모델 목록(버전1~3)
 const SUPPORTED_MODELS = [
@@ -79,6 +83,7 @@ async function generateCaption(cfg, baseText = '') {
  * @param {object} payload { prompt, outDir }
  */
 async function generateImage(cfg, payload = {}) {
+  if (mediaProvider(cfg) === 'fal') return fal.generateImage(cfg, payload);
   const apiKey = requireKey(cfg);
   const prompt = String(payload.prompt || '').trim();
   if (!prompt) throw new Error('이미지 프롬프트가 없습니다');
@@ -131,6 +136,7 @@ async function requestJson(url, apiKey, options = {}) {
  * 영상 생성은 비동기 작업이므로 생성 job을 만들고 완료까지 polling한 뒤 mp4로 저장한다.
  */
 async function generateVideo(cfg, payload = {}) {
+  if (mediaProvider(cfg) === 'fal') return fal.generateVideo(cfg, payload);
   const apiKey = requireKey(cfg);
   const prompt = String(payload.prompt || '').trim();
   if (!prompt) throw new Error('영상 프롬프트가 없습니다');
@@ -177,7 +183,8 @@ async function generateVideo(cfg, payload = {}) {
 
 async function generateDraft(cfg, payload = {}) {
   const out = { caption: '', asset: null };
-  if (payload.captionPrompt || payload.baseText) {
+  // 캡션은 텍스트 LLM(OpenAI) 담당. OpenAI 키가 없으면(예: fal 키만 보유) 캡션은 건너뛰고 미디어만 생성.
+  if ((payload.captionPrompt || payload.baseText) && cfg && cfg.apiKey) {
     out.caption = await generateCaption(Object.assign({}, cfg, {
       prompt: payload.captionPrompt || cfg.prompt,
     }), payload.baseText || '');
@@ -201,4 +208,30 @@ async function testKey(cfg) {
   }
 }
 
-module.exports = { generateCaption, generateImage, generateVideo, generateDraft, testKey, SUPPORTED_MODELS };
+/** fal.ai 게이트웨이 키 유효성 점검 */
+function testFalKey(cfg) { return fal.testKey(cfg); }
+
+/**
+ * 텍스트 프롬프트로 이미지 N장을 생성한다(배치). SNS용으로 여러 후보를 뽑아 일부만 고르는 용도.
+ * @returns {Promise<{assets: object[], errors: string[]}>}
+ */
+async function generateImages(cfg, payload = {}) {
+  const count = Math.max(1, Math.min(Number(payload.count || 1), 10)); // 안전 상한 10장
+  const assets = [];
+  const errors = [];
+  for (let i = 0; i < count; i++) {
+    try {
+      assets.push(await generateImage(cfg, payload));
+    } catch (e) {
+      errors.push(`${i + 1}번째 실패: ${String(e.message || e)}`);
+    }
+  }
+  return { assets, errors };
+}
+
+module.exports = {
+  generateCaption, generateImage, generateImages, generateVideo, generateDraft,
+  testKey, testFalKey, SUPPORTED_MODELS,
+  FAL_DEFAULT_IMAGE_MODEL: fal.DEFAULT_IMAGE_MODEL,
+  FAL_DEFAULT_VIDEO_MODEL: fal.DEFAULT_VIDEO_MODEL,
+};

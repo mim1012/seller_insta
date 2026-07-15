@@ -23,8 +23,11 @@ contextBridge.exposeInMainWorld('api', {
   loadTextList: () => ipcRenderer.invoke('file:loadTextList'),
 
   gptTest: (cfg) => ipcRenderer.invoke('gpt:test', cfg),
+  falTest: (cfg) => ipcRenderer.invoke('gpt:testFal', cfg),
   generateDraft: (payload) => ipcRenderer.invoke('ai:generateDraft', payload),
+  generateImages: (payload) => ipcRenderer.invoke('ai:generateImages', payload),
   selectDraft: (payload) => ipcRenderer.invoke('ai:selectDraft', payload),
+  selectDrafts: (payload) => ipcRenderer.invoke('ai:selectDrafts', payload),
   adbDevices: () => ipcRenderer.invoke('network:adbDevices'),
   resetMobileData: () => ipcRenderer.invoke('network:resetMobileData'),
   workStart: (params) => ipcRenderer.invoke('work:start', params),

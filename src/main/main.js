@@ -143,11 +143,31 @@ ipcMain.handle('file:loadTextList', async () => {
 
 // ---- GPT ----
 ipcMain.handle('gpt:test', (_e, cfg) => gpt.testKey(cfg));
+ipcMain.handle('gpt:testFal', (_e, cfg) => gpt.testFalKey(cfg));
 ipcMain.handle('ai:generateDraft', async (_e, payload) => {
   const s = store.getState();
   const cfg = Object.assign({}, s.gpt, payload && payload.gpt);
   const outDir = path.join(app.getPath('userData'), 'generated');
   return gpt.generateDraft(cfg, Object.assign({}, payload, { outDir }));
+});
+// 배치 이미지 생성: 텍스트로 N장을 뽑아 후보 목록 반환(일부만 선택해 업로드 목록에 추가)
+ipcMain.handle('ai:generateImages', async (_e, payload) => {
+  const s = store.getState();
+  const cfg = Object.assign({}, s.gpt, payload && payload.gpt);
+  const outDir = path.join(app.getPath('userData'), 'generated');
+  return gpt.generateImages(cfg, Object.assign({}, payload, { outDir }));
+});
+// 선택한 후보들(복수)을 스코프별 업로드 목록(imagePaths)에 추가
+ipcMain.handle('ai:selectDrafts', (_e, { target, assets }) => {
+  const paths = (assets || []).map((a) => a && a.path).filter(Boolean);
+  if (!paths.length) return store.getState();
+  const s = store.getState();
+  const current = target && target !== 'global'
+    ? (((s.accountSettings || {})[target] || {}).imagePaths || s.imagePaths || [])
+    : (s.imagePaths || []);
+  const next = current.slice();
+  for (const p of paths) if (!next.includes(p)) next.push(p);
+  return store.updateScoped(target || 'global', { imagePaths: next });
 });
 ipcMain.handle('ai:selectDraft', (_e, { target, asset }) => {
   if (!asset || !asset.path) return store.getState();

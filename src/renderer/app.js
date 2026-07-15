@@ -110,6 +110,14 @@ function loadUI() {
   $('#cnt').value = w.perAccountCount; $('#dmin').value = w.delayMin; $('#dmax').value = w.delayMax;
   $('#bodyMode').value = w.bodyMode; $('#tagMode').value = w.tagMode; $('#locMode').value = w.locMode;
   $('#gptOn').checked = g.enabled; $('#gptKey').value = g.apiKey || ''; $('#gptModel').value = g.model || 'gpt-4o-mini'; $('#gptPrompt').value = g.prompt || '';
+  $('#mediaProvider').value = g.provider || 'openai';
+  $('#falKey').value = g.falKey || '';
+  $('#falImageModel').value = g.falImageModel || 'fal-ai/bytedance/seedream/v4/text-to-image';
+  $('#falImageEditModel').value = g.falImageEditModel || 'fal-ai/gemini-25-flash-image/edit';
+  $('#falVideoModel').value = g.falVideoModel || 'fal-ai/bytedance/seedance/v1/pro/image-to-video';
+  $('#falVideoT2vModel').value = g.falVideoT2vModel || 'fal-ai/kling-video/v2.5-turbo/pro/text-to-video';
+  $('#aiCount').value = g.aiImageCount || 4;
+  toggleFalRows();
   $('#imgInfo').textContent = (v.imagePaths || []).length ? `미디어 묶음: ${v.imagePaths.length}개` : '';
   const tether = (state.network && state.network.tether) || {};
   $('#tetherOn').checked = !!tether.enabled;
@@ -151,7 +159,13 @@ function collect() {
   };
   return Promise.all([
     saveScoped({ image, registration, work }),
-    window.api.updateState({ network, gpt: Object.assign({}, state.gpt || {}, { enabled: $('#gptOn').checked, apiKey: $('#gptKey').value, model: $('#gptModel').value, prompt: $('#gptPrompt').value }) }),
+    window.api.updateState({ network, gpt: Object.assign({}, state.gpt || {}, {
+      enabled: $('#gptOn').checked, apiKey: $('#gptKey').value, model: $('#gptModel').value, prompt: $('#gptPrompt').value,
+      provider: $('#mediaProvider').value, falKey: $('#falKey').value,
+      falImageModel: $('#falImageModel').value, falImageEditModel: $('#falImageEditModel').value,
+      falVideoModel: $('#falVideoModel').value, falVideoT2vModel: $('#falVideoT2vModel').value,
+      aiImageCount: Number($('#aiCount').value) || 4,
+    }) }),
   ]);
 }
 function selectedAccountIds() { return $$('.accSel').filter((c) => c.checked).map((c) => c.value); }
@@ -230,6 +244,21 @@ $('#btnGptTest').addEventListener('click', async () => {
   setStatus((r.ok ? '✅ ' : '❌ ') + r.message);
 });
 
+function toggleFalRows() {
+  const isFal = $('#mediaProvider').value === 'fal';
+  $('#falRow').style.display = isFal ? '' : 'none';
+  $('#falModelRow').style.display = isFal ? '' : 'none';
+  $('#falEditModelRow').style.display = isFal ? '' : 'none';
+}
+$('#mediaProvider').addEventListener('change', toggleFalRows);
+$('#btnFalTest').addEventListener('click', async () => {
+  setStatus('fal 키 테스트...');
+  const r = await window.api.falTest({ falKey: $('#falKey').value });
+  setStatus((r.ok ? '✅ ' : '❌ ') + r.message);
+});
+
+let aiProductPhoto = null; // 제품 사진 경로(있으면 i2i/i2v로 전환)
+
 async function buildAiPayload() {
   await collect();
   const v = viewOf(scope);
@@ -241,8 +270,63 @@ async function buildAiPayload() {
     baseText: (v.content.bodies || [])[0] || '',
     size: $('#aiMediaType').value === 'image' ? $('#aiImageSize').value : '720x1280',
     seconds: $('#aiVideoSeconds').value,
+    count: Math.max(1, Math.min(Number($('#aiCount').value) || 1, 10)),
+    inputImagePath: aiProductPhoto || undefined,
   };
 }
+
+let aiGallery = []; // 생성된 후보 [{ asset, sel }]
+function renderAiGallery() {
+  const box = $('#aiGallery');
+  box.innerHTML = '';
+  aiGallery.forEach((it, idx) => {
+    const div = document.createElement('div');
+    div.className = 'galleryItem' + (it.sel ? ' sel' : '');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = it.sel;
+    cb.addEventListener('change', () => { it.sel = cb.checked; renderAiGallery(); });
+    const img = document.createElement('img');
+    img.src = it.asset.previewUrl; img.title = it.asset.model || '';
+    img.addEventListener('click', () => { it.sel = !it.sel; renderAiGallery(); });
+    div.appendChild(cb); div.appendChild(img);
+    box.appendChild(div);
+  });
+  const selCount = aiGallery.filter((x) => x.sel).length;
+  $('#aiGalleryInfo').textContent = aiGallery.length ? `후보 ${aiGallery.length}장 · 선택 ${selCount}장` : '';
+}
+
+$('#btnAiProductPhoto').addEventListener('click', async () => {
+  const p = await window.api.pickImage();
+  if (!p) return;
+  aiProductPhoto = p;
+  $('#aiProductInfo').textContent = '제품 사진 첨부됨 → 배경교체/영상 모드';
+});
+
+$('#btnAiBatch').addEventListener('click', async () => {
+  try {
+    const payload = await buildAiPayload();
+    if (!payload.imagePrompt) return setStatus('이미지 프롬프트(텍스트)를 입력하세요');
+    setStatus(`이미지 ${payload.count}장 생성 중...`);
+    $('#aiInfo').textContent = '생성 중...';
+    const r = await window.api.generateImages(payload);
+    const assets = (r && r.assets) || [];
+    aiGallery = assets.map((a) => ({ asset: a, sel: true }));
+    renderAiGallery();
+    const errN = (r && r.errors && r.errors.length) || 0;
+    $('#aiInfo').textContent = `생성 완료: ${assets.length}장${errN ? ` (실패 ${errN})` : ''}`;
+    setStatus(assets.length ? '후보 생성 완료. 체크한 것만 업로드 목록에 추가하세요' : '생성 실패: ' + ((r.errors || [])[0] || ''));
+  } catch (err) { setStatus('❌ ' + (err.message || err)); $('#aiInfo').textContent = String(err.message || err); }
+});
+
+$('#btnAiSelectAll').addEventListener('click', () => { aiGallery.forEach((x) => { x.sel = true; }); renderAiGallery(); });
+$('#btnAiSelectNone').addEventListener('click', () => { aiGallery.forEach((x) => { x.sel = false; }); renderAiGallery(); });
+$('#btnAiAddSelected').addEventListener('click', async () => {
+  const chosen = aiGallery.filter((x) => x.sel).map((x) => x.asset);
+  if (!chosen.length) return setStatus('추가할 후보를 체크하세요');
+  state = await window.api.selectDrafts({ target: scope, assets: chosen });
+  await refresh();
+  setStatus(`${chosen.length}장을 업로드 목록에 추가했습니다`);
+});
 
 $('#btnAiGenerate').addEventListener('click', async () => {
   try {
