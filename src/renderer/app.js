@@ -36,12 +36,19 @@ function viewOf(sc) {
 async function saveScoped(patch) { state = await window.api.updateScoped(scope, patch); }
 
 // 탭
-$$('.tab').forEach((t) => t.addEventListener('click', () => {
-  $$('.tab').forEach((x) => x.classList.remove('active'));
+function activateTab(t) {
+  $$('.tab').forEach((x) => { x.classList.remove('active'); x.setAttribute('aria-selected', 'false'); });
   $$('.panel').forEach((x) => x.classList.remove('active'));
   t.classList.add('active');
+  t.setAttribute('aria-selected', 'true');
   $(`.panel[data-panel="${t.dataset.tab}"]`).classList.add('active');
-}));
+}
+$$('.tab').forEach((t) => {
+  t.addEventListener('click', () => activateTab(t));
+  t.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateTab(t); }
+  });
+});
 
 // ---- 렌더 ----
 function renderScopeOptions() {

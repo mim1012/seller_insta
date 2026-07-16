@@ -4,8 +4,10 @@
 <meta charset="UTF-8" />
 <title>인스타그램 자동 업로드 프로그램</title>
 <style>
-  * { box-sizing: border-box; font-family: "Malgun Gothic", "맑은 고딕", sans-serif; font-size: 12px; }
-  body { margin: 0; background: #f0f0f0; color: #111; }
+  * { box-sizing: border-box; font-family: "Malgun Gothic", "맑은 고딕", sans-serif; }
+  body { margin: 0; background: #f0f0f0; color: #111; font-size: 13px; }
+  input, button, select, textarea { font: inherit; font-size: 13px; }
+  :focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
   .topbar { display: flex; gap: 6px; padding: 8px; align-items: center; }
   .topbar input { flex: 1; padding: 4px 6px; border: 1px solid #aaa; }
   button { padding: 5px 9px; border: 1px solid #999; background: #e7e7e7; cursor: pointer; }
@@ -59,7 +61,7 @@
 </head>
 <body>
   <div class="topbar">
-    <input id="topId" placeholder="검색/메모 (선택)" />
+    <input id="topId" aria-label="검색/메모" placeholder="검색/메모 (선택)" />
     <button id="btnReset">세팅 초기화</button>
     <button id="btnSave">세팅 저장</button>
   </div>
@@ -70,21 +72,21 @@
     <span id="scopeOverride" class="status" style="color:#92600a;font-weight:bold"></span>
   </div>
 
-  <div class="tabs">
-    <div class="tab active" data-tab="account">① 계정설정</div>
-    <div class="tab" data-tab="content">② 내용설정</div>
-    <div class="tab" data-tab="image">③ 이미지설정</div>
-    <div class="tab" data-tab="ai">④ AI 생성</div>
-    <div class="tab" data-tab="reg">⑤ 등록설정</div>
+  <div class="tabs" role="tablist" aria-label="설정 단계">
+    <div class="tab active" data-tab="account" role="tab" tabindex="0">① 계정설정</div>
+    <div class="tab" data-tab="content" role="tab" tabindex="0">② 내용설정</div>
+    <div class="tab" data-tab="image" role="tab" tabindex="0">③ 이미지설정</div>
+    <div class="tab" data-tab="ai" role="tab" tabindex="0">④ AI 생성</div>
+    <div class="tab" data-tab="reg" role="tab" tabindex="0">⑤ 등록설정</div>
   </div>
 
   <!-- 계정설정 -->
   <div class="panel active" data-panel="account">
     <div class="row">
-      <input id="accId" placeholder="인스타 id" style="flex:1" />
-      <input id="accPw" type="password" placeholder="비밀번호(암호화 저장)" style="flex:1" />
-      <input id="accProxy" placeholder="프록시 host:port" style="width:150px" />
-      <input id="accLabel" placeholder="라벨(선택)" style="width:120px" />
+      <input id="accId" aria-label="인스타 id" placeholder="인스타 id" style="flex:1" />
+      <input id="accPw" type="password" aria-label="비밀번호" placeholder="비밀번호(암호화 저장)" style="flex:1" />
+      <input id="accProxy" aria-label="프록시 host:port" placeholder="프록시 host:port" style="width:150px" />
+      <input id="accLabel" aria-label="계정 라벨" placeholder="라벨(선택)" style="width:120px" />
       <button id="btnAddAcc">계정 등록하기</button>
       <button id="btnLoadAcc">계정 파일 불러오기</button>
       <button id="btnSelAll">전체 선택</button>
@@ -166,41 +168,57 @@
 
   <!-- AI 생성 -->
   <div class="panel" data-panel="ai">
-    <div class="row">
-      미디어 <select id="aiMediaType"><option value="image">이미지</option><option value="reel">릴스/영상</option></select>
-      이미지 크기 <select id="aiImageSize"><option value="1024x1024">1:1</option><option value="1024x1536">4:5</option><option value="1536x1024">가로</option></select>
-      영상 길이 <select id="aiVideoSeconds"><option value="4">4초</option><option value="8">8초</option><option value="12">12초</option></select>
-      <button id="btnAttachMedia">로컬 미디어 첨부</button>
-    </div>
-    <div class="row"><textarea id="aiCaptionPrompt" rows="2" style="width:100%" placeholder="AI 글쓰기 프롬프트"></textarea></div>
-    <div class="row"><textarea id="aiImagePrompt" rows="3" style="width:100%" placeholder="원하는 이미지/영상을 텍스트로 설명 (예: 화이트 배경 미니멀 향수병, 부드러운 자연광, 상단 여백)"></textarea></div>
-    <div class="row">
-      생성 장수 <input type="number" id="aiCount" value="4" min="1" max="10" style="width:56px"/>
-      <button id="btnAiProductPhoto">제품 사진 첨부(배경교체/영상용)</button>
-      <span id="aiProductInfo" class="status"></span>
-    </div>
-    <div class="row">
-      <button id="btnAiBatch">여러 장 생성</button>
-      <button id="btnAiGenerate">1개 생성(글+미디어)</button>
-      <button id="btnAiRegenerate">다시 생성</button>
-      <span id="aiInfo" class="status"></span>
-    </div>
-    <fieldset><legend>생성 후보 갤러리 — 체크한 것만 업로드 목록에 추가</legend>
+    <fieldset><legend>1단계 · 무엇을 만들지 설정</legend>
+      <div class="row">
+        <label for="aiMediaType">미디어</label>
+        <select id="aiMediaType"><option value="image">이미지</option><option value="reel">릴스/영상</option></select>
+        <label for="aiImageSize">이미지 크기</label>
+        <select id="aiImageSize"><option value="1024x1024">1:1</option><option value="1024x1536">4:5</option><option value="1536x1024">가로</option></select>
+        <label for="aiVideoSeconds">영상 길이</label>
+        <select id="aiVideoSeconds"><option value="4">4초</option><option value="8">8초</option><option value="12">12초</option></select>
+      </div>
+      <div class="row"><textarea id="aiImagePrompt" rows="3" style="width:100%" aria-label="이미지·영상 프롬프트" placeholder="원하는 이미지/영상을 텍스트로 설명 (예: 화이트 배경 미니멀 향수병, 부드러운 자연광, 상단 여백)"></textarea></div>
+      <div class="row"><textarea id="aiCaptionPrompt" rows="2" style="width:100%" aria-label="AI 글쓰기 프롬프트" placeholder="AI 글쓰기 프롬프트 (비우면 등록설정의 GPT 프롬프트 사용)"></textarea></div>
+      <div class="row">
+        <label for="aiCount">생성 장수</label>
+        <input type="number" id="aiCount" value="4" min="1" max="10" style="width:56px"/>
+        <button id="btnAiProductPhoto">제품 사진 첨부(배경교체/영상용)</button>
+        <span id="aiProductInfo" class="status"></span>
+      </div>
+    </fieldset>
+
+    <fieldset><legend>2단계 · 생성</legend>
+      <div class="row">
+        <button id="btnAiBatch" class="primary">여러 장 생성</button>
+        <span class="status">권장 경로 — 여러 후보를 만든 뒤 3단계 갤러리에서 골라 업로드 목록에 담습니다.</span>
+      </div>
+      <div class="row">
+        <button id="btnAiGenerate">1개만 생성</button>
+        <button id="btnAiRegenerate">다시 생성</button>
+        <button id="btnAttachMedia">AI 대신 로컬 파일 첨부</button>
+        <span id="aiInfo" class="status"></span>
+      </div>
+    </fieldset>
+
+    <fieldset><legend>3단계 · 생성 후보 갤러리 — 체크한 것만 업로드 목록에 추가</legend>
       <div class="row">
         <button id="btnAiSelectAll">전체 선택</button>
         <button id="btnAiSelectNone">선택 해제</button>
-        <button id="btnAiAddSelected">선택한 항목 업로드 목록에 추가</button>
+        <button id="btnAiAddSelected" class="primary">선택한 항목 업로드 목록에 추가</button>
         <span id="aiGalleryInfo" class="status"></span>
       </div>
       <div id="aiGallery" class="galleryGrid"></div>
     </fieldset>
-    <div class="previewBox">
-      <div class="previewMedia" id="aiMediaPreview">미리보기</div>
-      <div class="previewText">
-        <textarea id="aiCaptionPreview" rows="8" style="width:100%" placeholder="생성된 글이 여기에 표시됩니다"></textarea>
-        <button id="btnAiUse">이 글/미디어 선택</button>
+
+    <fieldset><legend>“1개만 생성” 결과 미리보기</legend>
+      <div class="previewBox">
+        <div class="previewMedia" id="aiMediaPreview">미리보기</div>
+        <div class="previewText">
+          <textarea id="aiCaptionPreview" rows="8" style="width:100%" aria-label="생성된 글" placeholder="생성된 글이 여기에 표시됩니다"></textarea>
+          <button id="btnAiUse">이 글/미디어 선택</button>
+        </div>
       </div>
-    </div>
+    </fieldset>
   </div>
 
   <!-- 등록설정 -->
@@ -215,7 +233,7 @@
       <label class="chk"><input type="checkbox" id="hideLikes"/>좋아요/조회수 숨김</label>
       <label class="chk"><input type="checkbox" id="noComments"/>댓글 기능 해제</label>
       <label class="chk"><input type="checkbox" id="threads"/>Threads 자동 공유</label></div>
-    <div class="row"><label class="chk">접근성(alt)</label><input id="altText" placeholder="대체 텍스트" style="flex:1"/></div>
+    <div class="row"><label class="chk" for="altText">접근성(alt)</label><input id="altText" aria-label="접근성 대체 텍스트" placeholder="대체 텍스트" style="flex:1"/></div>
     <div class="row">본문 뒤 태그 삽입 수량 최소 <input type="number" id="tagMin" value="0"/> 최대 <input type="number" id="tagMax" value="0"/></div>
 
     <fieldset><legend>문구 치환 변형</legend>
