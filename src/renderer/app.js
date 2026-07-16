@@ -62,6 +62,7 @@ function renderAccounts() {
       <td>${esc(a.igId || '-')}</td><td>${esc(a.label)}</td>
       <td><input class="proxyEdit" data-proxy="${a.id}" value="${esc(a.proxy || '')}" placeholder="host:port" style="width:150px"/><button data-save-proxy="${a.id}">저장</button></td>
       <td>${pill}</td>
+      <td class="prog" data-prog="${a.id}" style="font-size:11px;color:#555"></td>
       <td><button data-login="${a.id}">로그인</button><button data-check="${a.id}">세션</button><button data-del="${a.id}">삭제</button></td>`;
     body.appendChild(tr);
   });
@@ -125,7 +126,22 @@ function loadUI() {
   $('#adbSerial').value = tether.adbSerial || '';
   $('#tetherWait').value = tether.waitSeconds || 8;
   renderLists(v);
+  updateScopeIndicator();
   updatePreflight();
+}
+
+function updateScopeIndicator() {
+  const bar = $('.scopebar'); const info = $('#scopeOverride');
+  if (!bar) return;
+  if (scope === 'global') { bar.style.background = '#e9eef5'; if (info) info.textContent = ''; return; }
+  const ov = (state.accountSettings || {})[scope] || {};
+  const names = { content: '내용', image: '이미지', registration: '등록', work: '작업', imagePaths: '이미지묶음' };
+  const keys = Object.keys(ov).filter((k) => {
+    const val = ov[k];
+    return val && (Array.isArray(val) ? val.length : typeof val === 'object' ? Object.keys(val).length : true);
+  });
+  bar.style.background = '#fff7d6';
+  if (info) info.textContent = keys.length ? `● 이 계정 전용 재정의: ${keys.map((k) => names[k] || k).join(', ')}` : '● 전체 기본과 동일(재정의 없음)';
 }
 
 function updatePreflight() {
@@ -399,7 +415,15 @@ $('#btnAiUse').addEventListener('click', async () => {
   }
 });
 
-window.api.onWorkEvent((e) => logLine(`[${e.label || ''}] ${e.stage}`));
+function updateAccountProgress(e) {
+  if (!e || !e.account) return;
+  const cell = $(`td[data-prog="${e.account}"]`);
+  if (!cell) return;
+  cell.textContent = String(e.stage || '');
+  cell.style.color = e.ok === true ? '#137a13' : e.ok === false ? '#a11' : '#555';
+  cell.style.fontWeight = (e.ok === true || e.ok === false) ? 'bold' : 'normal';
+}
+window.api.onWorkEvent((e) => { logLine(`[${e.label || ''}] ${e.stage}`); updateAccountProgress(e); });
 
 $('#btnPostNow').addEventListener('click', async () => {
   await collect();

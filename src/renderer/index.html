@@ -67,14 +67,15 @@
   <div class="scopebar">
     설정 대상: <select id="scope"></select>
     <span class="status">— 전체 기본을 바꾸면 모든 계정에 적용, 특정 계정을 고르면 그 계정만 다르게 설정됩니다.</span>
+    <span id="scopeOverride" class="status" style="color:#92600a;font-weight:bold"></span>
   </div>
 
   <div class="tabs">
-    <div class="tab active" data-tab="account">계정설정</div>
-    <div class="tab" data-tab="content">내용설정</div>
-    <div class="tab" data-tab="image">이미지설정</div>
-    <div class="tab" data-tab="ai">AI 생성</div>
-    <div class="tab" data-tab="reg">등록설정</div>
+    <div class="tab active" data-tab="account">① 계정설정</div>
+    <div class="tab" data-tab="content">② 내용설정</div>
+    <div class="tab" data-tab="image">③ 이미지설정</div>
+    <div class="tab" data-tab="ai">④ AI 생성</div>
+    <div class="tab" data-tab="reg">⑤ 등록설정</div>
   </div>
 
   <!-- 계정설정 -->
@@ -89,7 +90,7 @@
       <button id="btnSelAll">전체 선택</button>
     </div>
     <table>
-      <thead><tr><th>선택</th><th>id</th><th>라벨</th><th>프록시</th><th>세션</th><th>작업</th></tr></thead>
+      <thead><tr><th>선택</th><th>id</th><th>라벨</th><th>프록시</th><th>세션</th><th>진행</th><th>작업</th></tr></thead>
       <tbody id="accBody"></tbody>
     </table>
     <div class="row" style="margin-top:8px">
