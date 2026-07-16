@@ -24,8 +24,12 @@ const IMAGE_ENDPOINT = 'https://api.openai.com/v1/images/generations';
 const VIDEO_ENDPOINT = 'https://api.openai.com/v1/videos';
 
 function requireKey(cfg) {
-  const apiKey = cfg && cfg.apiKey;
-  if (!apiKey) throw new Error('GPT API 키가 없습니다');
+  const raw = cfg && cfg.apiKey;
+  if (!raw) throw new Error('GPT API 키가 없습니다');
+  const apiKey = String(raw).trim();
+  if (!/^[\x20-\x7E]+$/.test(apiKey)) {
+    throw new Error('API 키에 한글·공백·줄바꿈 등 허용되지 않는 문자가 있습니다. sk- 로 시작하는 키만 정확히 붙여넣으세요.');
+  }
   return apiKey;
 }
 
@@ -48,8 +52,8 @@ async function readError(res) {
  * @returns {Promise<string>} 생성된 캡션
  */
 async function generateCaption(cfg, baseText = '') {
-  const { apiKey, model = 'gpt-4o-mini', prompt = '비슷한 느낌으로 자연스럽게 다시 써줘' } = cfg || {};
-  requireKey(cfg);
+  const { model = 'gpt-4o-mini', prompt = '비슷한 느낌으로 자연스럽게 다시 써줘' } = cfg || {};
+  const apiKey = requireKey(cfg);
   if (!SUPPORTED_MODELS.includes(model)) throw new Error('지원하지 않는 모델: ' + model);
 
   const sys = '너는 인스타그램 브랜드 게시물 캡션 작가다. 한국어로 자연스럽고 간결하게 작성한다. 해시태그는 본문에 넣지 말고 캡션 텍스트만 출력한다.';

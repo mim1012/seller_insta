@@ -25,8 +25,12 @@ const DEFAULT_VIDEO_MODEL = 'fal-ai/bytedance/seedance/v1/pro/image-to-video';  
 const DEFAULT_VIDEO_T2V_MODEL = 'fal-ai/kling-video/v2.5-turbo/pro/text-to-video'; // 텍스트만 있을 때: Kling ($0.35/5s)
 
 function requireKey(cfg) {
-  const key = cfg && (cfg.falKey || cfg.apiKey);
-  if (!key) throw new Error('fal.ai API 키(FAL_KEY)가 없습니다');
+  const raw = cfg && (cfg.falKey || cfg.apiKey);
+  if (!raw) throw new Error('fal.ai API 키(FAL_KEY)가 없습니다');
+  const key = String(raw).trim();
+  if (!/^[\x20-\x7E]+$/.test(key)) {
+    throw new Error('fal 키에 한글·공백·줄바꿈 등 허용되지 않는 문자가 있습니다. 키만 정확히 붙여넣으세요.');
+  }
   return key;
 }
 
