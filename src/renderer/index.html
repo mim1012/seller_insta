@@ -10,6 +10,16 @@
   .topbar input { flex: 1; padding: 4px 6px; border: 1px solid #aaa; }
   button { padding: 5px 9px; border: 1px solid #999; background: #e7e7e7; cursor: pointer; }
   button:hover { background: #dcdcdc; } button:active { background: #cfcfcf; }
+  button.primary { background:#2563eb; color:#fff; border-color:#1d4ed8; font-weight:bold; }
+  button.primary:hover { background:#1d4ed8; }
+  button.danger { background:#dc2626; color:#fff; border-color:#b91c1c; }
+  button.danger:hover { background:#b91c1c; }
+  .preflight { padding:6px 8px; margin:0 8px; font-size:11px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .preflight .lbl { color:#555; }
+  .pf { padding:2px 8px; border-radius:10px; }
+  .pf-ok { background:#d6f5d6; color:#137a13; }
+  .pf-no { background:#f7d2d2; color:#a11; font-weight:bold; }
+  .pf-info { background:#e5e7eb; color:#333; }
   select, input[type=text], input[type=password], input[type=number] { border: 1px solid #aaa; padding: 3px 5px; }
   .scopebar { display:flex; gap:6px; align-items:center; padding:4px 8px; background:#e9eef5; border-bottom:1px solid #cbd5e1; }
   .scopebar b { color:#1d4ed8; }
@@ -270,10 +280,11 @@
 
   <div id="log"></div>
   <div class="status" id="globalStatus"></div>
+  <div class="preflight" id="preflight"></div>
   <div class="bottombar">
-    <button id="btnStart">작업 시작 (선택 계정 발행)</button>
+    <button id="btnStart" class="primary">작업 시작 (선택 계정 발행)</button>
     <button id="btnPostNow">단일 발행 테스트</button>
-    <button id="btnStop">작업 정지</button>
+    <button id="btnStop" class="danger">작업 정지</button>
   </div>
 
   <script src="./app.js"></script>

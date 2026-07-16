@@ -125,9 +125,31 @@ function loadUI() {
   $('#adbSerial').value = tether.adbSerial || '';
   $('#tetherWait').value = tether.waitSeconds || 8;
   renderLists(v);
+  updatePreflight();
 }
 
-async function refresh() { state = await window.api.getState(); renderScopeOptions(); renderAccounts(); loadUI(); }
+function updatePreflight() {
+  const box = $('#preflight'); if (!box || !state) return;
+  const v = viewOf(scope);
+  const accSel = selectedAccountIds().length;
+  const src = ($$('input[name=psrc]').find((x) => x.checked) || {}).value || 'saved';
+  const needImages = src === 'saved';
+  const imgs = (v.imagePaths || []).length;
+  const bodies = (v.content.bodies || []).length;
+  const gptOn = !!(state.gpt && state.gpt.enabled);
+  const badge = (ok, label) => `<span class="pf ${ok ? 'pf-ok' : 'pf-no'}">${ok ? '✓' : '!'} ${esc(label)}</span>`;
+  const parts = [
+    badge(accSel > 0, accSel > 0 ? `계정 ${accSel}개 선택` : '계정 미선택'),
+    needImages
+      ? badge(imgs > 0, imgs > 0 ? `이미지 ${imgs}개` : '이미지 없음(불러오기 필요)')
+      : `<span class="pf pf-info">사진소스: ${esc(src === 'color' ? '색상' : '자동 다운로드')}</span>`,
+    badge(bodies > 0 || gptOn, bodies > 0 ? `본문 ${bodies}개` : (gptOn ? '본문 GPT 생성' : '본문 없음')),
+    `<span class="pf pf-info">GPT ${gptOn ? '켜짐' : '꺼짐'}</span>`,
+  ];
+  box.innerHTML = '<span class="lbl">발행 준비:</span> ' + parts.join(' ');
+}
+
+async function refresh() { state = await window.api.getState(); renderScopeOptions(); renderAccounts(); loadUI(); updatePreflight(); }
 
 function collect() {
   const image = {
@@ -173,7 +195,10 @@ function selectedAccountIds() { return $$('.accSel').filter((c) => c.checked).ma
 // ---- 이벤트 ----
 $('#scope').addEventListener('change', (e) => { scope = e.target.value; loadUI(); setStatus('설정 대상: ' + e.target.selectedOptions[0].textContent); });
 $('#btnSave').addEventListener('click', async () => { await collect(); await refresh(); setStatus('세팅 저장됨'); });
-$('#btnReset').addEventListener('click', async () => { state = await window.api.resetState(); scope = 'global'; await refresh(); setStatus('전체 초기화됨'); });
+$('#btnReset').addEventListener('click', async () => {
+  if (!confirm('전체 설정을 초기화합니다. 모든 계정별 설정과 목록이 사라지며 되돌릴 수 없습니다. 계속할까요?')) return;
+  state = await window.api.resetState(); scope = 'global'; await refresh(); setStatus('전체 초기화됨');
+});
 
 $('#btnAddAcc').addEventListener('click', async () => {
   const igId = $('#accId').value.trim(); if (!igId) return setStatus('인스타 id를 입력하세요');
@@ -182,7 +207,9 @@ $('#btnAddAcc').addEventListener('click', async () => {
   setStatus('계정 등록됨(비번 암호화). [로그인]으로 자동 로그인'); await refresh();
 });
 $('#btnLoadAcc').addEventListener('click', async () => { const r = await window.api.loadAccountFile(); await refresh(); setStatus(`계정 ${r.added || 0}개 추가됨`); });
-$('#btnSelAll').addEventListener('click', () => { const all = $$('.accSel'); const on = all.some((c) => !c.checked); all.forEach((c) => (c.checked = on)); });
+$('#btnSelAll').addEventListener('click', () => { const all = $$('.accSel'); const on = all.some((c) => !c.checked); all.forEach((c) => (c.checked = on)); updatePreflight(); });
+$('#accBody').addEventListener('change', (e) => { if (e.target.classList.contains('accSel')) updatePreflight(); });
+$$('input[name=psrc]').forEach((r) => r.addEventListener('change', updatePreflight));
 
 $('#accBody').addEventListener('click', async (e) => {
   const b = e.target.closest('button'); if (!b) return;
@@ -193,7 +220,10 @@ $('#accBody').addEventListener('click', async (e) => {
     await window.api.setProxy({ id: b.dataset.saveProxy, proxy: input ? input.value : '' });
     setStatus('프록시 저장됨'); await refresh();
   }
-  if (b.dataset.del) { await window.api.removeAccount(b.dataset.del); await refresh(); }
+  if (b.dataset.del) {
+    if (!confirm('이 계정을 삭제할까요? 저장된 세션·계정별 설정도 함께 제거됩니다.')) return;
+    await window.api.removeAccount(b.dataset.del); await refresh();
+  }
 });
 
 $('#btnAdbDevices').addEventListener('click', async () => {
